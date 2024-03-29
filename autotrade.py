@@ -1,3 +1,4 @@
+# 필요한 라이브러리들을 불러옵니다.
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -11,21 +12,23 @@ import time
 import requests
 
 
-# Setup
+# Setup # 환경 변수에서 API 키를 로드하여 클라이언트를 설정합니다.
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 upbit = pyupbit.Upbit(os.getenv("UPBIT_ACCESS_KEY"), os.getenv("UPBIT_SECRET_KEY"))
 
-# API 토큰과 채팅 ID 설정
+# 텔레그램 봇 API 토큰과 채팅 ID를 설정합니다.
 bot_token = "6684470997:AAHr_HrpJRlZECzkQSF5M3C5YMSnBFVgD10"
 chat_id = "-1002004168859"  # 채널의 ID
 message = "매매 알림: 테스트 메시지입니다."
 
+# 텔레그램 메시지를 전송하는 함수입니다.
 def send_telegram_message(bot_token, chat_id, message):
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     data = {"chat_id": chat_id, "text": message}
     response = requests.post(url, data=data)
     return response.json()
 
+# 현재 비트코인의 상태를 조회하는 함수입니다.
 def get_current_status():
     orderbook = pyupbit.get_orderbook(ticker="KRW-BTC")
     current_time = orderbook['timestamp']
@@ -43,13 +46,14 @@ def get_current_status():
     current_status = {'current_time': current_time, 'orderbook': orderbook, 'btc_balance': btc_balance, 'krw_balance': krw_balance, 'btc_avg_buy_price': btc_avg_buy_price}
     return json.dumps(current_status)
 
-
+# 비트코인 거래 데이터를 가져오고 분석 준비를 하는 함수입니다.
 def fetch_and_prepare_data():
     # Fetch data
     df_daily = pyupbit.get_ohlcv("KRW-BTC", "day", count=30)
     df_hourly = pyupbit.get_ohlcv("KRW-BTC", interval="minute60", count=24)
 
     # Define a helper function to add indicators
+    # 데이터에 기술적 분석 지표를 추가하는 내부 함수입니다.
     def add_indicators(df):
         # Moving Averages
         df['SMA_10'] = ta.sma(df['close'], length=10)
@@ -92,6 +96,8 @@ def fetch_and_prepare_data():
 
     return json.dumps(combined_data)
 
+# 사용자 지침을 파일에서 읽는 함수입니다.
+# GPT-4에 데이터를 분석하도록 지시하는 사용자 지침을 파일에서 읽습니다.
 def get_instructions(file_path):
     try:
         with open(file_path, "r", encoding="utf-8") as file:
@@ -101,7 +107,8 @@ def get_instructions(file_path):
         print("File not found.")
     except Exception as e:
         print("An error occurred while reading the file:", e)
-
+        
+# GPT-4를 사용하여 데이터를 분석하고 거래 결정을 내리는 함수입니다.
 def analyze_data_with_gpt4(data_json):
     instructions_path = "instructions.md"
     try:
@@ -125,6 +132,7 @@ def analyze_data_with_gpt4(data_json):
         print(f"Error in analyzing data with GPT-4: {e}")
         return None
 
+# 비트코인 매수를 시도하는 함수입니다.
 def execute_buy():
     print("Attempting to buy BTC...")
     try:
@@ -140,6 +148,7 @@ def execute_buy():
     except Exception as e:
         print(f"Failed to execute buy order: {e}")
 
+# 비트코인 매도를 시도하는 함수입니다.
 def execute_sell():
     print("Attempting to sell BTC...")
     try:
@@ -156,6 +165,7 @@ def execute_sell():
     except Exception as e:
         print(f"Failed to execute sell order: {e}")
 
+# 데이터 분석을 통해 매수 또는 매도 결정을 내리고 해당 작업을 실행하는 메인 함수입니다.
 def make_decision_and_execute():
     print("Making decision and executing...")
     data_json = fetch_and_prepare_data()
@@ -177,6 +187,7 @@ def make_decision_and_execute():
     except Exception as e:
         print(f"Failed to parse the advice as JSON: {e}")
 
+# 프로그램의 메인 엔트리 포인트입니다. 처음 실행 시 한 번 매매 결정을 내리고 이후 2시간마다 주기적으로 실행합니다.
 if __name__ == "__main__":
     make_decision_and_execute()
     schedule.every(2).hour.at(":01").do(make_decision_and_execute)

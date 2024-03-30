@@ -7,9 +7,9 @@ import pandas as pd
 import pandas_ta as ta
 import json
 from openai import OpenAI
+import requests
 import schedule
 import time
-import requests
 
 
 # Setup # 환경 변수에서 API 키를 로드하여 클라이언트를 설정합니다.
@@ -190,7 +190,7 @@ def make_decision_and_execute():
 # 프로그램의 메인 엔트리 포인트입니다. 처음 실행 시 한 번 매매 결정을 내리고 이후 2시간마다 주기적으로 실행합니다.
 if __name__ == "__main__":
     make_decision_and_execute()
-    schedule.every(2).hour.at(":01").do(make_decision_and_execute)
+    schedule.every(2).hours.at(":01").do(make_decision_and_execute)
 
     while True:
         schedule.run_pending()

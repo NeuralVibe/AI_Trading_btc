@@ -16,17 +16,23 @@ import time
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 upbit = pyupbit.Upbit(os.getenv("UPBIT_ACCESS_KEY"), os.getenv("UPBIT_SECRET_KEY"))
 
-# 텔레그램 봇 API 토큰과 채팅 ID를 설정합니다.
-bot_token = "6684470997:AAHr_HrpJRlZECzkQSF5M3C5YMSnBFVgD10"
-chat_id = "-1002004168859"  # 채널의 ID
-message = "매매 알림: 테스트 메시지입니다."
+# 텔레그램 봇 API 토큰과 채팅 ID를 환경변수에서 로드합니다.
+bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
 # 텔레그램 메시지를 전송하는 함수입니다.
 def send_telegram_message(bot_token, chat_id, message):
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    data = {"chat_id": chat_id, "text": message}
-    response = requests.post(url, data=data)
-    return response.json()
+    if not bot_token or not chat_id:
+        print(f"텔레그램 설정이 없습니다. 메시지: {message}")
+        return
+    
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        data = {"chat_id": chat_id, "text": message}
+        response = requests.post(url, data=data)
+        return response.json()
+    except Exception as e:
+        print(f"텔레그램 메시지 전송 실패: {e}")
 
 # 현재 비트코인의 상태를 조회하는 함수입니다.
 def get_current_status():
@@ -172,18 +178,21 @@ def make_decision_and_execute():
     advice = analyze_data_with_gpt4(data_json)
 
     try:
-        decision = json.loads(advice)
-        print(decision)
-        
-        # 텔레그램 메시지 전송
-        message = f"결정요인: {decision}"
-        send_telegram_message(bot_token, chat_id, message)
+        if advice:
+            decision = json.loads(advice)
+            print(decision)
             
-        
-        if decision.get('decision') == "buy":
-            execute_buy()
-        elif decision.get('decision') == "sell":
-            execute_sell()
+            # 텔레그램 메시지 전송
+            message = f"결정요인: {decision}"
+            send_telegram_message(bot_token, chat_id, message)
+                
+            
+            if decision.get('decision') == "buy":
+                execute_buy()
+            elif decision.get('decision') == "sell":
+                execute_sell()
+        else:
+            print("AI 분석 결과가 없습니다.")
     except Exception as e:
         print(f"Failed to parse the advice as JSON: {e}")
 
